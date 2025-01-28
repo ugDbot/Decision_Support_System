@@ -1,0 +1,155 @@
+from flask import Flask, request, render_template, jsonify
+import psycopg2
+import matplotlib.pyplot as plt
+from io import BytesIO
+import base64
+import pandas as pd
+
+app = Flask(__name__)
+
+# Database connection
+import psycopg2
+
+def get_db_connection():
+    conn = psycopg2.connect(
+        host="localhost",  # If PostgreSQL is installed on your local machine
+        database="dss_db",  # Your database name
+        user="Fuga",  # The username you created
+        password="admin"  # The password you set for the user
+    )
+    return conn
+
+
+@app.route("/")
+def index():
+    return render_template("index.html")
+
+@app.route('/logistics')
+def logistics():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM logistics")
+    logistics_data = cursor.fetchall()
+    conn.close()
+    # Render logistics.html template and pass data
+    return render_template('logistics.html', logistics=logistics_data)
+
+# Routes
+@app.route('/')
+def dashboard():
+    return render_template('index.html')
+
+@app.route('/logistics')
+def logistics():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM logistics;')
+    data = cur.fetchall()
+    conn.close()
+    return render_template('logistics.html', data=data)
+
+@app.route('/retail')
+def retail():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM retail;')
+    data = cur.fetchall()
+    conn.close()
+    return render_template('retail.html', data=data)
+
+@app.route('/production')
+def production():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM production;')
+    data = cur.fetchall()
+    conn.close()
+    return render_template('production.html', data=data)
+
+@app.route('/healthcare')
+def healthcare():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM healthcare;')
+    data = cur.fetchall()
+    conn.close()
+    return render_template('healthcare.html', data=data)
+
+@app.route('/education')
+def education():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM education;')
+    data = cur.fetchall()
+    conn.close()
+    return render_template('education.html', data=data)
+
+@app.route('/hospitality')
+def hospitality():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM hospitality;')
+    data = cur.fetchall()
+    conn.close()
+    return render_template('hospitality.html', data=data)
+
+@app.route('/employee_management')
+def employee_management():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM employee_management;')
+    data = cur.fetchall()
+    conn.close()
+    return render_template('employee_management.html', data=data)
+
+
+@app.route("/sales_chart")
+def sales_chart():
+    conn = get_db_connection()
+    df = pd.read_sql("SELECT product, sales FROM retail", conn)
+    conn.close()
+
+    # Plot the data
+    fig, ax = plt.subplots()
+    ax.bar(df["product"], df["sales"])
+    ax.set_title("Retail Sales")
+    ax.set_xlabel("Product")
+    ax.set_ylabel("Sales")
+
+    # Save the plot to a PNG image
+    img = BytesIO()
+    fig.savefig(img, format='png')
+    img.seek(0)
+    plot_url = base64.b64encode(img.getvalue()).decode('utf8')
+    return render_template("chart.html", plot_url=plot_url)
+
+@app.route("/add_logistics", methods=["POST"])
+def add_logistics():
+    item = request.form['item']
+    quantity = request.form['quantity']
+    status = request.form['status']
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO logistics (item, quantity, status) VALUES (%s, %s, %s)", (item, quantity, status))
+    conn.commit()
+    conn.close()
+
+    return render_template("index.html", message="Logistics item added successfully!")
+
+@app.route("/add_retail", methods=["POST"])
+def add_retail():
+    product = request.form['product']
+    sales = request.form['sales']
+    stock = request.form['stock']
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO retail (product, sales, stock) VALUES (%s, %s, %s)", (product, sales, stock))
+    conn.commit()
+    conn.close()
+
+    return render_template("index.html", message="Retail product added successfully!")
+
+if __name__ == "__main__":
+    app.run(debug=True)
